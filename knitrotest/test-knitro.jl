@@ -3,7 +3,7 @@
 using Pkg
 Pkg.activate(".")
 Pkg.add(url="https://github.com/tmigot/NLPModelsKnitro.jl#linear-cons")
-using NLPModelsKnitro
+using KNITRO, NLPModelsKnitro
 using OptimizationProblems, NLPModelsJuMP
 
 #=
@@ -19,7 +19,7 @@ for prob in names(OptimizationProblems)
 end
 =#
 
-prob = :hs105
+prob = :hs106
 nlp = MathOptNLPModel(eval(prob)())
 solver = KnitroSolver(nlp, outlev = 0)
 stats = knitro!(nlp, solver)
@@ -30,9 +30,9 @@ stats = knitro!(nlp, solver)
 # @test stats.status == :first_order
 
 # check constraint violation: https://github.com/jump-dev/KNITRO.jl/blob/c81586bd406cbf6fbde2c136feda28bf8dee31b7/src/kn_constraints.jl#L103
-index = Cint.nlp.meta.lin # Vector{Cint}(undef, nlp.meta.ncon)
-infeas, viols = KN_get_con_viols(solver.kc, index)
-@show viols
+# index = Cint.(nlp.meta.lin) # Vector{Cint}(undef, nlp.meta.ncon)
+# infeas, viols = KNITRO.KN_get_con_viols(solver.kc, index) # needs KNITRO_VERSION >= 12.4
+# @show viols
 
 gx = KNITRO.KN_get_objgrad_values(solver.kc)[2]
 @show gx
