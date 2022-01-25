@@ -47,7 +47,7 @@ solvers = Dict(
   :fps => nlp -> fps_solve(
     nlp,
     nlp.meta.x0,
-    σ_0 = 100.,
+    σ_0 = 1000.,
     max_iter = typemax(Int64),
     max_time = max_time,
     max_eval = typemax(Int64),
