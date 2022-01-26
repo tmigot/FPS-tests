@@ -2,7 +2,8 @@ using Pkg; Pkg.activate("")
 Pkg.instantiate()
 using CUTEst, NLPModels, SolverBenchmark
 using NLPModelsIpopt, DCISolver, Percival, FletcherPenaltyNLPSolver
-nmax = 10000
+using NLPModelsKnitro
+nmax = 300
 problems = readlines("list_problems_eq_$nmax.dat")
 cutest_problems = (CUTEstModel(p) for p in problems)
 
