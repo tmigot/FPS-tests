@@ -1,3 +1,6 @@
+using Pkg
+Pkg.activate(".")
+Pkg.instantiate()
 using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
 using OptimizationProblems, OptimizationProblems.ADNLPProblems
 using Stopping, StoppingInterface, NLPModelsIpopt
