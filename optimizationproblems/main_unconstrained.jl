@@ -1,0 +1,78 @@
+using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
+using OptimizationProblems, OptimizationProblems.ADNLPProblems
+using Stopping, StoppingInterface, NLPModelsIpopt
+using FletcherPenaltyNLPSolver, Dates
+
+n = 100
+
+df = OptimizationProblems.meta
+problems = df[df.ncon .== 0 .&& df.nvar .> 1, :name]
+problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
+
+atol, rtol = 1e-5, 1e-7
+
+solvers = Dict(
+  :lbfgs => model -> lbfgs(model, mem=5, atol = atol, rtol = rtol, max_time = max_time),
+  :trunk => model -> trunk(model, atol = atol, rtol = rtol, max_time = max_time),
+  :tron => model -> tron(model, atol = atol, rtol = rtol, max_time = max_time),
+  :fps_ipopt1_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :ldlt),
+  :fps_tron1_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :ldlt),
+  :fps_ipopt2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :ldlt),
+  :fps_tron2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :ldlt),
+  :fps_ipopt1_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :iterative),
+  :fps_tron1_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :iterative),
+  :fps_ipopt2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :iterative),
+  :fps_tron2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :iterative),
+)
+
+if StoppingInterface.is_knitro_installed
+  solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
+  solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_knitro2_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :iterative)
+  solvers[:fps_knitro2_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :ldlt)
+end
+
+stats = bmark_solvers(solvers, problems)
+
+name = "$(today())_OP_unconstrained_$(n)_$(string(length(problems)))"
+@save "$(name).jld2" stats
+
+cols = [:id, :name, :nvar, :objective, :dual_feas, :neval_obj, :neval_grad, :neval_hess, :iter, :elapsed_time, :status]
+header = Dict(
+  :nvar => "n",
+  :objective => "f(x)",
+  :dual_feas => "‖∇f(x)‖",
+  :neval_obj => "# f",
+  :neval_grad => "# ∇f",
+  :neval_hess => "# ∇²f",
+  :elapsed_time => "t",
+)
+
+first_order(df) = df.status .== :first_order
+unbounded(df) = df.status .== :unbounded
+solved(df) = first_order(df) .| unbounded(df)
+costnames = ["time", "obj + grad + hess"]
+costs = [
+  df -> .!solved(df) .* Inf .+ df.elapsed_time,
+  df -> .!solved(df) .* Inf .+ df.neval_obj .+ df.neval_grad .+ df.neval_hess,
+]
+
+using Plots
+gr()
+
+p = profile_solvers(stats, costs, costnames)
+png("$(name)_profile_wall")
+p1 = performance_profile(
+  stats,
+  costs[1],
+  legend=:bottomright,
+  title = "Performance profile on performance profile unconstrained w.r.t. $(costnames[1])",
+)
+png("$(name)_pp_time")
+p2 = performance_profile(
+  stats,
+  costs[2],
+  legend = :bottomright,
+  title = "Performance profile on performance profile unconstrained w.r.t. $(costnames[2])",
+)
+png("$(name)_pp_sum")
