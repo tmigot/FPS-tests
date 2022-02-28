@@ -5,7 +5,7 @@ using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
 using OptimizationProblems, OptimizationProblems.ADNLPProblems
 using Stopping, StoppingInterface, NLPModelsIpopt
 using FletcherPenaltyNLPSolver, Dates, JLD2
-using Percival, DCISolver
+using Percival, DCISolver, NLPModelsKnitro
 
 n = 100
 

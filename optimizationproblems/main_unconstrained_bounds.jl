@@ -4,7 +4,7 @@ Pkg.instantiate()
 using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
 using OptimizationProblems, OptimizationProblems.ADNLPProblems
 using Stopping, StoppingInterface, NLPModelsIpopt
-using FletcherPenaltyNLPSolver, Dates, JLD2
+using FletcherPenaltyNLPSolver, Dates, JLD2, NLPModelsKnitro
 
 n = 100
 
