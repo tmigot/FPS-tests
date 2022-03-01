@@ -9,10 +9,11 @@ using FletcherPenaltyNLPSolver, Dates, JLD2
 n = 100
 
 df = OptimizationProblems.meta
-problems = df[df.ncon .== 0 .&& df.nvar .> 1 .&& df.has_bounds, :name]
+problems = df[(df.ncon .== 0) .& (df.nvar .> 1) .& df.has_bounds, :name]
 problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
 
 atol, rtol = 1e-5, 1e-7
+max_time = 120.
 
 solvers = Dict(
   :tron => model -> tron(model, atol = atol, rtol = rtol, max_time = max_time),

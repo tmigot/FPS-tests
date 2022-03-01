@@ -4,15 +4,16 @@ Pkg.instantiate()
 using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
 using OptimizationProblems, OptimizationProblems.ADNLPProblems
 using Stopping, StoppingInterface, NLPModelsIpopt
-using FletcherPenaltyNLPSolver, Dates
+using JLD2, FletcherPenaltyNLPSolver, Dates
 
 n = 100
 
 df = OptimizationProblems.meta
-problems = df[df.ncon .== 0 .&& df.nvar .> 1, :name]
+problems = df[(df.ncon .== 0) .& (df.nvar .> 1) .& (.!df.has_bounds), :name]
 problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
 
 atol, rtol = 1e-5, 1e-7
+max_time = 120.
 
 solvers = Dict(
   :lbfgs => model -> lbfgs(model, mem=5, atol = atol, rtol = rtol, max_time = max_time),

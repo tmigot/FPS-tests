@@ -10,10 +10,11 @@ using Percival, DCISolver
 n = 100
 
 df = OptimizationProblems.meta
-problems = df[df.has_equalities_only .&& df.nvar .> 1 .&& .!df.has_bounds, :name]
+problems = df[df.has_equalities_only .& (df.nvar .> 1) .& (.!df.has_bounds), :name]
 problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
 
 atol, rtol = 1e-5, 1e-7
+max_time = 120.
 
 solvers = Dict(
   :ipopt => model -> ipopt(model, print_level = 0, dual_inf_tol = Inf, constr_viol_tol = Inf, compl_inf_tol = Inf, tol = rtol, max_cpu_time = max_time),

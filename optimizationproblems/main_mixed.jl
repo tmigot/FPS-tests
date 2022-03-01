@@ -10,7 +10,7 @@ using Percival, DCISolver
 n = 100
 
 df = OptimizationProblems.meta
-problems = df[.!df.has_equalities_only .&& df.ncon .> 0 .&& df.nvar .> 1, :name]
+problems = df[(.!df.has_equalities_only) .& (df.ncon .> 0) .& (df.nvar .> 1), :name]
 problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
 
 atol, rtol = 1e-5, 1e-7
