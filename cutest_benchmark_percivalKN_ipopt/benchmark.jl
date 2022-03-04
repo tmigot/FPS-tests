@@ -1,8 +1,10 @@
 using Pkg; Pkg.activate("")
 Pkg.instantiate()
-using CUTEst, NLPModels, SolverBenchmark
+using CUTEst, NLPModels, SolverBenchmark, StoppingInterface
 using NLPModelsIpopt, DCISolver, Percival, FletcherPenaltyNLPSolver
-using NLPModelsKnitro
+
+use_knitro = true
+
 nmax = 300
 problems = readlines("list_problems_eq_$nmax.dat")
 cutest_problems = (CUTEstModel(p) for p in problems)
@@ -48,17 +50,25 @@ solvers = Dict(
   ),
   :fps => nlp -> fps_solve(
     nlp,
-    nlp.meta.x0,
-    σ_0 = 1000.,
     max_iter = typemax(Int64),
     max_time = max_time,
     max_eval = typemax(Int64),
-    unconstrained_solver = knitro,
+    unconstrained_solver = StoppingInterface.tron,
     atol = tol,
     rtol = tol,
   )
 )
+
+if use_knitro
+  using NLPModelsKnitro
+  solvers[:knitro] = model -> knitro(model, atol = atol, rtol = rtol, maxtime_real = max_time)
+  solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
+  solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_knitro2_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :iterative)
+  solvers[:fps_knitro2_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :ldlt)
+end
+
 stats = bmark_solvers(solvers, cutest_problems)
 
-using JLD2
-@save "ipopt_dcildl_percival_fpsK_$(string(length(problems))).jld2" stats
+using JLD2, Dates
+@save "$(today())_ipopt_dcildl_percival_fpsK_$(string(length(problems)))_$nmax.jld2" stats
