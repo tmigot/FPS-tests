@@ -3,7 +3,7 @@ Pkg.instantiate()
 using CUTEst, NLPModels, SolverBenchmark, StoppingInterface
 using NLPModelsIpopt, DCISolver, Percival, FletcherPenaltyNLPSolver
 
-use_knitro = true
+use_knitro = false
 
 nmax = 300
 problems = readlines("list_problems_eq_$nmax.dat")
@@ -11,6 +11,8 @@ cutest_problems = (CUTEstModel(p) for p in problems)
 
 max_time = 1200.0 #20 minutes
 tol = 1e-5
+atol = tol
+rtol = tol
 
 solvers = Dict(
   :ipopt => nlp -> ipopt(
@@ -48,12 +50,30 @@ solvers = Dict(
     #subsolver_max_eval = max_eval,
     #subsolver_kwargs = Dict(:max_cgiter => nlp.meta.nvar),
   ),
-  :fps => nlp -> fps_solve(
+  :fps_tron => nlp -> fps_solve(
     nlp,
     max_iter = typemax(Int64),
     max_time = max_time,
     max_eval = typemax(Int64),
     unconstrained_solver = StoppingInterface.tron,
+    atol = tol,
+    rtol = tol,
+  ),
+  :fps_lbfgs => nlp -> fps_solve(
+    nlp,
+    max_iter = typemax(Int64),
+    max_time = max_time,
+    max_eval = typemax(Int64),
+    unconstrained_solver = StoppingInterface.lbfgs,
+    atol = tol,
+    rtol = tol,
+  ),
+  :fps_ipopt => nlp -> fps_solve(
+    nlp,
+    max_iter = typemax(Int64),
+    max_time = max_time,
+    max_eval = typemax(Int64),
+    unconstrained_solver = StoppingInterface.ipopt,
     atol = tol,
     rtol = tol,
   )
