@@ -81,9 +81,9 @@ solvers = Dict(
 
 if use_knitro
   using NLPModelsKnitro
-  solvers[:knitro] = model -> knitro(model, atol = atol, rtol = rtol, maxtime_real = max_time)
-  solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
-  solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:knitro] = model -> knitro(model, opttol_abs = atol, opttol = rtol, maxtime_real = max_time)
+  # solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
+  # solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
   solvers[:fps_knitro2_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :iterative)
   solvers[:fps_knitro2_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :ldlt)
 end
