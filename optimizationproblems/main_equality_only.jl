@@ -2,40 +2,49 @@ using Pkg
 Pkg.activate(".")
 Pkg.instantiate()
 using ADNLPModels, JSOSolvers, NLPModels, SolverBenchmark
-using OptimizationProblems, OptimizationProblems.ADNLPProblems
+using OptimizationProblems, OptimizationProblems.ADNLPProblems, NLPModelsJuMP
 using Stopping, StoppingInterface, NLPModelsIpopt
-using FletcherPenaltyNLPSolver, Dates, JLD2
+using FletcherPenaltySolver, Dates, JLD2
 using Percival, DCISolver
+using DataFrames
 
 n = 100
 
 df = OptimizationProblems.meta
-problems = df[df.has_equalities_only .& (df.nvar .> 1) .& (.!df.has_bounds), :name]
-problems = [eval(Symbol(problem))(n = n) for problem ∈ problems]
+problems = df[df.has_equalities_only .& (df.nvar .> 10) .& (.!df.has_bounds), :name]
+problems = [MathOptNLPModel(OptimizationProblems.PureJuMP.eval(Symbol(problem))(n = n), name = string(problem)) for problem ∈ problems]
+jth_hess_implemented = false
 
-atol, rtol = 1e-5, 1e-7
-max_time = 120.
+atol, rtol = 1e-4, 1e-5
+max_time = 1200.
 
 solvers = Dict(
   :ipopt => model -> ipopt(model, print_level = 0, dual_inf_tol = Inf, constr_viol_tol = Inf, compl_inf_tol = Inf, tol = rtol, max_cpu_time = max_time),
   :percival => model -> percival(model, atol = atol, rtol = rtol, max_time = max_time),
   :dci => model -> dci(model, atol = atol, rtol = rtol, linear_solver = :ldlfact),
-  :fps_ipopt1_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :ldlt),
-  :fps_tron1_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :ldlt),
-  :fps_ipopt2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :ldlt),
-  :fps_tron2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :ldlt),
-  :fps_ipopt1_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :iterative),
-  :fps_tron1_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :iterative),
-  :fps_ipopt2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :iterative),
-  :fps_tron2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, unconstrained_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :iterative),
+  :fps_ipopt2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :ldlt),
+  :fps_tron2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :ldlt),
+  :fps_trunk2_ldlt => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.trunk, hessian_approx = Val(2), qds_solver = :ldlt),
+  :fps_ipopt2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.ipopt, hessian_approx = Val(2), qds_solver = :iterative),
+  :fps_tron2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.tron, hessian_approx = Val(2), qds_solver = :iterative),
+  :fps_trunk2_it => model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.trunk, hessian_approx = Val(2), qds_solver = :iterative),
 )
 
-if StoppingInterface.is_knitro_installed
+if jth_hess_implemented
+  solvers[:fps_ipopt1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_tron1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_trunk1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.trunk, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_ipopt1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.ipopt, hessian_approx = Val(1), qds_solver = :iterative)
+  solvers[:fps_tron1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.tron, hessian_approx = Val(1), qds_solver = :iterative)
+  solvers[:fps_trunk1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, max_time = max_time, subproblem_solver = StoppingInterface.trunk, hessian_approx = Val(1), qds_solver = :iterative)
+end
+
+if false # StoppingInterface.is_knitro_installed
   solvers[:knitro] = model -> knitro(model, atol = atol, rtol = rtol, maxtime_real = max_time)
-  solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
-  solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
-  solvers[:fps_knitro2_it] = model -> fps_solve(model, atol = atol, rtol = rtol, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :iterative)
-  solvers[:fps_knitro2_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, unconstrained_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :ldlt)
+  solvers[:fps_knitro1_it] = model -> fps_solve(model, atol = atol, rtol = rtol, subproblem_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :iterative)
+  solvers[:fps_knitro1_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, subproblem_solver = StoppingInterface.knitro, hessian_approx = Val(1), qds_solver = :ldlt)
+  solvers[:fps_knitro2_it] = model -> fps_solve(model, atol = atol, rtol = rtol, subproblem_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :iterative)
+  solvers[:fps_knitro2_ldlt] = model -> fps_solve(model, atol = atol, rtol = rtol, subproblem_solver = StoppingInterface.knitro, hessian_approx = Val(2), qds_solver = :ldlt)
 end
 
 stats = bmark_solvers(solvers, problems)
@@ -63,6 +72,17 @@ costs = [
   df -> .!solved(df) .* Inf .+ df.neval_obj .+ df.neval_grad .+ df.neval_hess,
 ]
 
+cols_short = [:objective, :dual_feas, :neval_obj, :neval_grad, :neval_hess, :neval_hprod, :neval_cons, :neval_jac, :neval_jprod, :neval_jtprod, :iter, :elapsed_time, :status]
+for (k, problem) in zip(1:length(problems), problems)
+  @show (problem.meta.name, problem.meta.nvar, problem.meta.ncon)
+  df = DataFrame(names = collect(keys(solvers)))
+  for col in cols_short
+    setproperty!(df, col, [stats[solver][!, col][k] for solver ∈ keys(solvers)])
+  end
+  pretty_stats(df)
+end
+
+#=
 using Plots
 gr()
 
@@ -82,3 +102,4 @@ p2 = performance_profile(
   title = "Performance profile on performance profile bounds w.r.t. $(costnames[2])",
 )
 png("$(name)_pp_sum")
+=#
