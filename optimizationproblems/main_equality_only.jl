@@ -74,7 +74,7 @@ costs = [
 
 cols_short = [:objective, :dual_feas, :neval_obj, :neval_grad, :neval_hess, :neval_hprod, :neval_cons, :neval_jac, :neval_jprod, :neval_jtprod, :iter, :elapsed_time, :status]
 for (k, problem) in zip(1:length(problems), problems)
-  @show (problem.meta.name, problem.meta.nvar, problem.meta.ncon)
+  @show (problem.meta.name, problem.meta.nvar, problem.meta.ncon, problem.meta.nnln, problem.meta.nlin)
   df = DataFrame(names = collect(keys(solvers)))
   for col in cols_short
     setproperty!(df, col, [stats[solver][!, col][k] for solver ∈ keys(solvers)])
