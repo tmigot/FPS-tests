@@ -1,11 +1,15 @@
 using Pkg; Pkg.activate("")
 Pkg.instantiate()
+Pkg.add(url="https://github.com/JuliaSmoothOptimizers/Percival.jl")
+Pkg.add(url="https://github.com/JuliaSmoothOptimizers/FletcherPenaltySolver.jl")
 using CUTEst, NLPModels, SolverBenchmark, StoppingInterface
-using NLPModelsIpopt, DCISolver, Percival, FletcherPenaltyNLPSolver
+using NLPModelsIpopt, DCISolver, Percival, FletcherPenaltySolver
 
-use_knitro = false
+Pkg.status()
+use_knitro = true
 
 nmax = 300
+name = nmax
 problems = readlines("list_problems_eq_$nmax.dat")
 cutest_problems = (CUTEstModel(p) for p in problems)
 
@@ -35,20 +39,24 @@ solvers = Dict(
       ctol = tol,
       rtol = tol,
   ),
+  :DCIMA57 => nlp -> dci(
+    nlp,
+    linear_solver = :ma57,
+    max_time = max_time,
+    max_iter = typemax(Int64),
+    max_eval = typemax(Int64),
+    atol = tol,
+    ctol = tol,
+    rtol = tol,
+  ),
   :percival => nlp -> percival(
     nlp,
-    #μ::Real = T(10.0),
     max_iter = typemax(Int64),
     max_time = max_time,
     max_eval = typemax(Int64),
     atol = tol,
     ctol = tol,
     rtol = tol,
-    #subsolver_logger::AbstractLogger = NullLogger(),
-    #inity = nothing,
-    #subproblem_modifier = identity,
-    #subsolver_max_eval = max_eval,
-    #subsolver_kwargs = Dict(:max_cgiter => nlp.meta.nvar),
   ),
   :fps_tron => nlp -> fps_solve(
     nlp,
@@ -56,6 +64,15 @@ solvers = Dict(
     max_time = max_time,
     max_eval = typemax(Int64),
     unconstrained_solver = StoppingInterface.tron,
+    atol = tol,
+    rtol = tol,
+  ),
+  :fps_tron => nlp -> fps_solve(
+    nlp,
+    max_iter = typemax(Int64),
+    max_time = max_time,
+    max_eval = typemax(Int64),
+    unconstrained_solver = StoppingInterface.trunk,
     atol = tol,
     rtol = tol,
   ),
@@ -91,4 +108,4 @@ end
 stats = bmark_solvers(solvers, cutest_problems)
 
 using JLD2, Dates
-@save "$(today())_ipopt_dcildl_percival_fpsK_$(string(length(problems)))_$nmax.jld2" stats
+@save "$(today())_ipopt_dci_percival_fpsK_$(string(length(problems)))_$nmax.jld2" stats
