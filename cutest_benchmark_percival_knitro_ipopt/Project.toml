@@ -1,7 +1,7 @@
 [deps]
 CUTEst = "1b53aba6-35b6-5f92-a507-53c67d53f819"
 DCISolver = "bee2e536-65f6-11e9-3844-e5bb4c9c55c9"
-FletcherPenaltyNLPSolver = "e59f0261-166d-4fee-8bf3-5e50457de5db"
+FletcherPenaltySolver = "e59f0261-166d-4fee-8bf3-5e50457de5db"
 GR = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 NLPModels = "a4795742-8479-5a88-8948-cc11e1c8c1a6"

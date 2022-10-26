@@ -13,7 +13,7 @@ name = nmax
 problems = readlines("list_problems_eq_$nmax.dat")
 cutest_problems = (CUTEstModel(p) for p in problems)
 
-max_time = 1200.0 #20 minutes
+max_time = 120.0 #20 minutes
 tol = 1e-5
 atol = tol
 rtol = tol
